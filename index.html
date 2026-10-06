@@ -673,7 +673,7 @@ $('clrNames').onclick=function(){G.names=Array(8).fill('');touch();renderSetup()
 var POOL=['Alex','Blake','Casey','Drew','Emery','Finn','Gray','Harper','Indy','Jules','Kai','Logan','Morgan','Noel','Quinn','Reese','Sage','Taylor','Wren','Zion'];
 function rnd(n){return Math.floor(Math.random()*n)}
 function randomizeRun(){
-  if(G.started||playedCount(G)>0){var cp=JSON.parse(JSON.stringify(G));cp.id=uid();cp.name=G.name+' (before demo)';cp.u=Date.now()-1;R.games[cp.id]=cp}
+  if((G.started||playedCount(G)>0)&&!/^Demo /.test(G.name)){var cp=JSON.parse(JSON.stringify(G));cp.id=uid();cp.name=G.name+' (before demo)';cp.u=Date.now()-1;R.games[cp.id]=cp}
   var pool=POOL.slice(),names=[];for(var i=0;i<8;i++)names.push(pool.splice(rnd(pool.length),1)[0]);
   G.names=names;G.paid=names.map(function(){return true});G.settle=[];
   G.scores={};

@@ -532,12 +532,18 @@ function touch(){if(G){G.u=Date.now()}persist()}
 /* ---------- link = the whole game ---------- */
 function enc(o){var j=JSON.stringify(o),b=btoa(unescape(encodeURIComponent(j)));return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function dec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return JSON.parse(decodeURIComponent(escape(atob(s))))}
-function setHash(){
+/* the address bar is refreshed at most every 1.5s (Safari limits how often it can change) and once more when the page is hidden */
+var hashT=null;
+function setHash(){clearTimeout(hashT);hashT=setTimeout(writeHash,1500)}
+function writeHash(){
+  clearTimeout(hashT);
   try{
     if(G&&G.started&&R.view!=='games')history.replaceState(null,'','#g='+enc(G));
     else history.replaceState(null,'',location.pathname+location.search);
   }catch(e){}
 }
+window.addEventListener('pagehide',writeHash);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')writeHash()});
 function shareUrl(){return location.origin+location.pathname+'#g='+enc(G)}
 function clean(g){
   if(!g||typeof g!=='object'||!g.id||!Array.isArray(g.names)||g.names.length!==8||typeof g.scores!=='object')return null;

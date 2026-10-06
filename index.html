@@ -272,6 +272,13 @@ details.adv[open] summary{border-bottom:1px solid var(--line);margin-bottom:6px}
 .btn.big{min-height:68px;font-size:26px;letter-spacing:.16em;border-radius:14px}
 .home{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:none;border:0;padding:0;color:inherit;text-align:left}
 @media (max-width:430px){.home{flex:none}}
+.mk{font:700 10px var(--f-disp);letter-spacing:.04em;margin-left:2px;color:var(--muted);vertical-align:super}
+.mk.tie{color:var(--loss)}
+.tg1{padding:6px 0;border-top:1px solid color-mix(in srgb,var(--warn-ink) 25%,transparent)}
+.tg1:first-of-type{border-top:0}
+.tiebox p.st{margin:2px 0 0;font-size:13px;opacity:.95}
+.settle{margin-top:6px}
+.settle>span{display:block;font-weight:600;font-size:13px;margin-bottom:4px}
 /* paid */
 .nf{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pd{display:inline-flex;align-items:center;gap:8px;min-height:36px;font:700 13px var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);cursor:pointer}
@@ -391,7 +398,7 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
       </div>
       <div class="panel">
         <details class="adv" id="tbdet"><summary><span>Tiebreak rules</span><em class="tg"></em><small id="tbNow"></small></summary>
-          <p class="hint" style="margin-bottom:6px">Players level on record are split by these, in this order. Turn any off or move them up and down. Standings update right away.</p>
+          <p class="hint" style="margin-bottom:6px">Players level on record are split by these, in this order. Head-to-head counts wins minus losses in matches where the tied players faced each other. Turn any off or move them up and down. Standings update right away.</p>
           <div id="tblist"></div>
           <div class="row" style="margin-top:8px"><button class="btn small" id="tbreset" type="button">Back to default</button></div>
         </details>
@@ -482,9 +489,10 @@ var CRIT={
   lp:{name:'Points in losses',f:function(p){return p.lp}},
   diff:{name:'Point differential',f:function(p){return p.pf-p.pa}},
   pf:{name:'Total points scored',f:function(p){return p.pf}},
-  pa:{name:'Fewest points allowed',f:function(p){return -p.pa}}
+  pa:{name:'Fewest points allowed',f:function(p){return -p.pa}},
+  h2h:{name:'Head-to-head',f:function(p){return 0}}
 };
-var DEF_ORDER=['w','lp','diff','pf','pa'],DEF_OFF=['pa'];
+var DEF_ORDER=['w','lp','diff','pf','pa','h2h'],DEF_OFF=['pa','h2h'];
 var KEY='pbrr-v2',PREV='pbrr-v2-prev';
 var R={games:{},trash:[],cur:null,view:'scores',round:0,court:0,manual:false};
 var G=null,editing=false,lastSaveOk=true;
@@ -494,6 +502,7 @@ function cleanPo(p){p=p||{};return {fmt:['pick','p14','open'].indexOf(p.fmt)>=0?
 function cleanFin(f){f=f||{};var g=[];for(var i=0;i<5;i++){var x=(f.g&&f.g[i])||['',''];g.push([String(x[0]==null?'':x[0]).replace(/\D/g,'').slice(0,2),String(x[1]==null?'':x[1]).replace(/\D/g,'').slice(0,2)])}return {fmt:[1,3,5].indexOf(+f.fmt)>=0?+f.fmt:3,g:g}}
 function ensureFin(g){if(!g.fin||!Array.isArray(g.fin.g))g.fin=cleanFin(g.fin);return g}
 function ensurePo(g){if(!g.po||typeof g.po!=='object')g.po=cleanPo();return g}
+function ensureTb(g){if(!Array.isArray(g.tb))g.tb=DEF_ORDER.slice();if(!Array.isArray(g.off))g.off=DEF_OFF.slice();DEF_ORDER.forEach(function(k){if(g.tb.indexOf(k)<0){g.tb.push(k);if(DEF_OFF.indexOf(k)>=0&&g.off.indexOf(k)<0)g.off.push(k)}});if(!Array.isArray(g.settle))g.settle=[];return g}
 function ensurePaid(g){if(!Array.isArray(g.paid)||g.paid.length!==8)g.paid=Array(8).fill(false);return g}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
@@ -533,11 +542,12 @@ function clean(g){
   if(!g||typeof g!=='object'||!g.id||!Array.isArray(g.names)||g.names.length!==8||typeof g.scores!=='object')return null;
   var o={id:String(g.id),name:String(g.name||'Game').slice(0,60),names:g.names.map(function(n){return String(n||'').slice(0,30)}),scores:{},po:cleanPo(g.po),fin:cleanFin(g.fin),champ:g.champ?String(g.champ).slice(0,90):null,paid:(Array.isArray(g.paid)&&g.paid.length===8)?g.paid.map(Boolean):Array(8).fill(false),started:!!g.started,
     tb:Array.isArray(g.tb)?g.tb.filter(function(k){return CRIT[k]}):DEF_ORDER.slice(),off:Array.isArray(g.off)?g.off.filter(function(k){return CRIT[k]}):DEF_OFF.slice(),c:g.c||Date.now(),u:g.u||Date.now()};
-  DEF_ORDER.forEach(function(k){if(o.tb.indexOf(k)<0)o.tb.push(k)});
+  DEF_ORDER.forEach(function(k){if(o.tb.indexOf(k)<0){o.tb.push(k);if(DEF_OFF.indexOf(k)>=0)o.off.push(k)}});
+  o.settle=Array.isArray(g.settle)?g.settle.map(Number).filter(function(n){return n>=0&&n<8}):[];
   Object.keys(g.scores).forEach(function(k){var s=g.scores[k];if(/^\d-[01]$/.test(k)&&Array.isArray(s))o.scores[k]=[String(s[0]).replace(/\D/g,'').slice(0,2),String(s[1]).replace(/\D/g,'').slice(0,2)]});
   return o;
 }
-function sig(g){return JSON.stringify([g.names,g.scores,g.tb,g.off,g.name,g.started,(g.paid||[]).map(Boolean),g.po||null,g.fin||null])}
+function sig(g){return JSON.stringify([g.names,g.scores,g.tb,g.off,g.name,g.started,(g.paid||[]).map(Boolean),g.po||null,g.fin||null,g.settle||[]])}
 /* merge a game in without destroying anything that is already here */
 function mergeGame(raw){
   var g=clean(raw);if(!g)return null;
@@ -553,8 +563,8 @@ function mergeGame(raw){
 
 /* ---------- game helpers ---------- */
 function fmtDate(t){var d=new Date(t);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}
-function makeGame(names){return {id:uid(),name:'Game '+fmtDate(Date.now()),names:names||Array(8).fill(''),paid:Array(8).fill(false),po:cleanPo(),fin:cleanFin(),champ:null,scores:{},started:false,tb:DEF_ORDER.slice(),off:DEF_OFF.slice(),c:Date.now(),u:Date.now()}}
-function openGame(id){G=ensureFin(ensurePo(ensurePaid(R.games[id])));R.cur=id;R.round=firstOpenRound();R.court=0;for(var m=0;m<2;m++)if(!decided(R.round,m)){R.court=m;break}editing=false}
+function makeGame(names){return {id:uid(),name:'Game '+fmtDate(Date.now()),names:names||Array(8).fill(''),paid:Array(8).fill(false),po:cleanPo(),fin:cleanFin(),champ:null,scores:{},started:false,tb:DEF_ORDER.slice(),off:DEF_OFF.slice(),settle:[],c:Date.now(),u:Date.now()}}
+function openGame(id){G=ensureTb(ensureFin(ensurePo(ensurePaid(R.games[id]))));R.cur=id;R.round=firstOpenRound();R.court=0;for(var m=0;m<2;m++)if(!decided(R.round,m)){R.court=m;break}editing=false}
 function newGame(){
   if(G&&!G.started){return}
   var names=G?G.names.slice():Array(8).fill('');
@@ -591,7 +601,56 @@ function compute(){
   return {P:P,done:done};
 }
 function activeCrit(){return G.tb.filter(function(k){return G.off.indexOf(k)<0})}
-function cmpP(a,b){var c=activeCrit();for(var k=0;k<c.length;k++){var f=CRIT[c[k]].f,x=f(a),y=f(b);if(x!==y)return y-x}return 0}
+function critName(c){return c==='manual'?'Play-off / coin flip':CRIT[c].name}
+function h2hNet(list){
+  var set={},net={};list.forEach(function(p){set[p.i]=1;net[p.i]=0});
+  SCHED.forEach(function(rd,r){rd.forEach(function(mt,m){
+    if(!decided(r,m))return;var sc=getScore(r,m).map(Number);
+    for(var t=0;t<2;t++){var w=sc[t]>sc[1-t];
+      mt[t].forEach(function(x){if(!set[x])return;mt[1-t].forEach(function(y){if(set[y])net[x]+=w?1:-1})})}
+  })});
+  return net;
+}
+function keyFnFor(c,list){
+  if(c==='h2h'){var net=h2hNet(list);return function(p){return net[p.i]}}
+  if(c==='manual')return function(p){var ix=G.settle.indexOf(p.i);return ix<0?-1000:-ix};
+  return CRIT[c].f;
+}
+/* split a list by one criterion at a time; whatever stays level moves on to the next criterion */
+function resolveGroup(list,crits,steps){
+  if(list.length<=1||!crits.length)return [list];
+  var c=crits[0],f=keyFnFor(c,list);
+  var scored=list.map(function(p){return {p:p,k:f(p)}}).sort(function(a,b){return b.k-a.k});
+  var groups=[];
+  scored.forEach(function(x){var g=groups[groups.length-1];if(g&&g.k===x.k)g.ps.push(x.p);else groups.push({k:x.k,ps:[x.p]})});
+  var distinct=groups.length>1;
+  if(c!=='manual'||distinct)steps.push({crit:c,vals:scored,distinct:distinct});
+  if(c==='manual'&&distinct)list.forEach(function(p){p.man=true});
+  if(!distinct)return resolveGroup(list,crits.slice(1),steps);
+  var out=[];
+  groups.forEach(function(g){out=out.concat(g.ps.length>1?resolveGroup(g.ps,crits.slice(1),steps):[g.ps])});
+  return out;
+}
+/* full ranking: groups by the first criterion (record), then breaks each tie and notes how */
+function computeRank(Pobj){
+  var crits=activeCrit().concat(['manual']),first=crits[0],f0=keyFnFor(first,Pobj);
+  Pobj.forEach(function(p){p.tier=null;p.how='';p.man=false});
+  var scored=Pobj.map(function(p){return {p:p,k:f0(p)}}).sort(function(a,b){return b.k-a.k});
+  var groups=[];
+  scored.forEach(function(x){var g=groups[groups.length-1];if(g&&g.k===x.k)g.ps.push(x.p);else groups.push({k:x.k,ps:[x.p]})});
+  var order=[],ties=[],tid=0;
+  groups.forEach(function(g){
+    if(g.ps.length===1){order.push(g.ps[0]);return}
+    var steps=[],tiers=resolveGroup(g.ps,crits.slice(1),steps),flat=[];
+    tiers.forEach(function(t){flat=flat.concat(t);if(t.length>1){tid++;t.forEach(function(p){p.tier='t'+tid})}});
+    flat.forEach(function(p){p.how=p.tier?'tie':(p.man?'po':'tb')});
+    ties.push({players:flat,start:order.length,end:order.length+flat.length-1,steps:steps,tiers:tiers});
+    order=order.concat(flat);
+  });
+  return {P:order,ties:ties,first:first};
+}
+var lastRank=null;
+function ordn(n){return ['1st','2nd','3rd','4th','5th','6th','7th','8th'][n-1]||(n+'th')}
 
 /* ---------- setup ---------- */
 function paidCount(){var n=G.paid.filter(Boolean).length;$('paidN').textContent=n+' of 8 paid'}
@@ -615,7 +674,7 @@ function rnd(n){return Math.floor(Math.random()*n)}
 function randomizeRun(){
   if(G.started||playedCount(G)>0){var cp=JSON.parse(JSON.stringify(G));cp.id=uid();cp.name=G.name+' (before demo)';cp.u=Date.now()-1;R.games[cp.id]=cp}
   var pool=POOL.slice(),names=[];for(var i=0;i<8;i++)names.push(pool.splice(rnd(pool.length),1)[0]);
-  G.names=names;G.paid=names.map(function(){return Math.random()<.7});
+  G.names=names;G.paid=names.map(function(){return true});G.settle=[];
   G.scores={};
   for(var r=0;r<7;r++)for(var m=0;m<2;m++){
     var w=rnd(2),sc=['',''];
@@ -782,28 +841,26 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitGrid);
 
 /* ---------- standings ---------- */
 function renderStand(){
-  var c=compute(),P=c.P.slice().sort(cmpP),complete=c.done===14;
-  var tied=function(a,b){return cmpP(a,b)===0};
+  var c=compute(),rk=computeRank(c.P),P=rk.P,complete=c.done===14;lastRank=rk;
+  var unres=[];
+  if(complete)rk.ties.forEach(function(t){t.tiers.forEach(function(tr){if(tr.length>1){var st=P.indexOf(tr[0]);if(st<4)unres.push({s:st,tr:tr})}})});
   /* clinched = even if every remaining match went against them, fewer than 4 others can still reach their win count */
   var locked={};P.forEach(function(p){var n=P.filter(function(q){return q!==p&&q.w+(7-q.w-q.l)>=p.w}).length;if(n<=3&&c.done>0)locked[p.i]=1});
   var nLocked=Object.keys(locked).length;
-  var fs=finState(P,complete),champSet={};if(fs.champ)fs.champ.forEach(function(i){champSet[i]=1});
+  var fs=finState(P,complete&&!unres.length),champSet={};if(fs.champ)fs.champ.forEach(function(i){champSet[i]=1});
   var h='<tr><th></th><th>Player</th><th>W-L</th><th>+/-</th><th>Pts in L</th></tr>';
   P.forEach(function(p,k){
-    var isT=P.some(function(q){return q!==p&&tied(p,q)}),diff=p.pf-p.pa,inn=k<4&&c.done>0;
-    h+='<tr data-p="'+p.i+'" class="'+(inn?'in ':'')+(k===0&&inn?'first ':'')+(k===3?'cut':'')+'"><td class="rk"><span>'+(k+1)+'</span>'+(isT?'<sup>=</sup>':'')+'</td><td class="nm"><div class="nmw"><span class="nmt">'+esc(nm(p.i))+'</span>'+(G.paid[p.i]?'<span class="paid">paid</span>':'')+(champSet[p.i]?'<span class="champ-pill">champ</span>':'')+(inn?'<span class="badge">'+(locked[p.i]?'IN':'TOP 4')+'</span>':'')+'</div></td><td>'+p.w+'-'+p.l+'</td><td>'+(diff>0?'+':'')+diff+'</td><td>'+p.lp+'</td></tr>';
+    var mk=complete&&p.how?(p.how==='tie'?'<sup class="mk tie" title="Still level">=</sup>':(p.how==='po'?'<sup class="mk" title="Settled by play-off or coin flip">po</sup>':'<sup class="mk" title="Tie split by a tiebreaker">tb</sup>')):'',diff=p.pf-p.pa,inn=k<4&&c.done>0;
+    h+='<tr data-p="'+p.i+'" class="'+(inn?'in ':'')+(k===0&&inn?'first ':'')+(k===3?'cut':'')+'"><td class="rk"><span>'+(k+1)+'</span>'+mk+'</td><td class="nm"><div class="nmw"><span class="nmt">'+esc(nm(p.i))+'</span>'+(G.paid[p.i]?'<span class="paid">paid</span>':'')+(champSet[p.i]?'<span class="champ-pill">champ</span>':'')+(inn?'<span class="badge">'+(locked[p.i]?'IN':'TOP 4')+'</span>':'')+'</div></td><td>'+p.w+'-'+p.l+'</td><td>'+(diff>0?'+':'')+diff+'</td><td>'+p.lp+'</td></tr>';
   });
   $('tbl').innerHTML=h;
   var b='';
-  if(c.done>0&&tied(P[3],P[4])){
-    var grp=P.filter(function(q){return tied(q,P[3])});
-    b='<div class="banner">Tie for 4th: '+grp.map(function(q){return esc(nm(q.i))}).join(', ')+' are level on every tiebreaker. Play it off with one game to 11, or turn on another tiebreak below.</div>';
-  }
+  if(unres.length)b='<div class="banner">'+unres.map(function(u){return 'Still tied for '+ordn(u.s+1)+': '+u.tr.map(function(q){return esc(nm(q.i))}).join(', ')+' (level on every tiebreak). Settle it under Playoff below.'}).join('<br>')+'</div>';
   if(!b&&complete)b='<div class="banner ok">Clear!<small>All 14 matches are in and the top 4 are locked. On to the playoffs.</small></div>';
   if(!b&&!complete&&nLocked>=4)b='<div class="banner ok">Clear!<small>The top 4 are already locked in with '+(14-c.done)+' match'+(14-c.done===1?'':'es')+' still to play. Seeding can still change.</small></div>';
   var okNow=b.indexOf('banner ok')>=0;if(okNow&&!lastOk&&R.view==='stand')confetti();lastOk=okNow;
   $('banner').innerHTML=b;
-  $('standHint').textContent=complete?'All 14 matches are in. The top 4 advance. "=" marks players level on every tiebreaker.':'Provisional: '+c.done+' of 14 matches scored. Top 4 advance.';
+  $('standHint').textContent=complete?'All 14 matches are in. The top 4 advance. Marks: tb = tie split by a tiebreaker, po = settled by play-off or coin flip, = = still level.':'Provisional: '+c.done+' of 14 matches scored. Top 4 advance.';
   renderPlayoff(P,c,complete);renderFinals(fs);
   $('paidHint').textContent=G.paid.filter(Boolean).length+' of 8';
   renderTb();
@@ -812,23 +869,39 @@ var FMT={pick:'#1 seed picks partner',p14:'#1 & #4 paired, #2 & #3 paired',open:
 var PAY={wta:'Winners take all',back:'2nd place gets buy-in back'};
 function money(x){var r=Math.round(x*100)/100;return '$'+(r%1===0?r:r.toFixed(2))}
 function critShow(k,v){if(k==='pa')v=-v;return (k==='diff'&&v>0?'+':'')+v}
-function explainTies(P,complete){
-  if(!complete)return '';
-  var act=activeCrit(),inn=P.slice(0,4),h='';
-  for(var k=4;k<8;k++){
-    var X=P[k],mates=inn.filter(function(y){return y.w===X.w});
-    if(!mates.length)continue;
-    var Y=mates[mates.length-1],steps=[],won=false;
-    for(var j=0;j<act.length;j++){
-      var key=act[j],f=CRIT[key].f,a=f(X),b=f(Y);
-      if(key==='w')continue;
-      if(a===b){steps.push(CRIT[key].name.toLowerCase()+' tied at '+critShow(key,a));continue}
-      steps.push(CRIT[key].name.toLowerCase()+' '+critShow(key,a)+' vs '+critShow(key,b));won=true;break;
-    }
-    h+='<p><b>'+esc(nm(X.i))+'</b> and <b>'+esc(nm(Y.i))+'</b> both finished '+X.w+'-'+X.l+'. '+(won?(function(t){return t.charAt(0).toUpperCase()+t.slice(1)})(steps.join(', then '))+'. '+esc(nm(Y.i))+' gets the spot.':'Still level on every tiebreak: play it off.')+'</p>';
-  }
-  return h?'<div class="tiebox"><h4>Why they missed out</h4>'+h+'</div>':'';
+function stepVals(st){
+  if(st.crit==='manual')return st.vals.filter(function(x){return x.k>-1000}).map(function(x){return esc(nm(x.p.i))}).join(' over ');
+  return st.vals.map(function(x){return esc(nm(x.p.i))+' '+critShow(st.crit,x.k)}).join(', ')+(st.distinct?'':' (all level)');
 }
+function explainTies(rk,complete){
+  if(!complete)return '';
+  var h='';
+  rk.ties.forEach(function(t){
+    if(t.start>3)return;
+    var pl=t.players,pos=ordn(t.start+1)+(t.end>t.start?'\u2013'+ordn(t.end+1):'');
+    h+='<div class="tg1"><p><b>'+pos+' place:</b> '+pl.map(function(q){return esc(nm(q.i))}).join(', ')+(pl.length===2?' both':' all')+' finished '+(rk.first==='w'?pl[0].w+'-'+pl[0].l:'level on '+critName(rk.first).toLowerCase())+'.</p>';
+    t.steps.forEach(function(st){h+='<p class="st">'+critName(st.crit)+': '+stepVals(st)+'</p>'});
+    var n=t.start,res=[];
+    t.tiers.forEach(function(tr){
+      if(tr.length===1)res.push('<b>'+ordn(n+1)+'</b> '+esc(nm(tr[0].i)));
+      else res.push('<b>'+ordn(n+1)+'\u2013'+ordn(n+tr.length)+'</b> '+tr.map(function(q){return esc(nm(q.i))}).join(' / ')+' (level)');
+      n+=tr.length;
+    });
+    h+='<p class="st">Result: '+res.join(', ')+'</p>';
+    t.tiers.forEach(function(tr){
+      if(tr.length>1)h+='<div class="settle"><span>Still level. Tap who finishes ahead, best first (play-off or coin flip):</span><div class="picks">'+tr.map(function(q){return '<button type="button" class="pk" data-settle="'+q.i+'">'+esc(nm(q.i))+'</button>'}).join('')+'</div></div>';
+    });
+    var inSet=pl.filter(function(q){return G.settle.indexOf(q.i)>=0});
+    if(inSet.length)h+='<div class="settle"><span>Settled by play-off or coin flip.</span><div class="picks"><button type="button" class="pk" data-reset="'+inSet.map(function(q){return q.i}).join(',')+'">Change</button></div></div>';
+    h+='</div>';
+  });
+  return h?'<div class="tiebox"><h4>Ties and how they were settled</h4>'+h+'</div>':'';
+}
+$('poTie').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.settle!=null){var i=+b.dataset.settle;if(G.settle.indexOf(i)<0)G.settle.push(i);touch();renderStand()}
+  else if(b.dataset.reset!=null){var ids=b.dataset.reset.split(',').map(Number);G.settle=G.settle.filter(function(x){return ids.indexOf(x)<0});touch();renderStand()}
+});
 function renderPlayoff(P,c,complete){
   var box=$('bracketBox');box.hidden=c.done===0;if(c.done===0)return;
   ensurePo(G);var po=G.po,S=P.slice(0,4);
@@ -850,7 +923,7 @@ function renderPlayoff(P,c,complete){
   document.querySelectorAll('#poFmt button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.fmt===po.fmt)});
   document.querySelectorAll('#poPayOpt button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.pay===po.pay)});
   var bi=$('buyin');if(document.activeElement!==bi)bi.value=po.buyin;
-  $('poTie').innerHTML=explainTies(P,complete);
+  $('poTie').innerHTML=explainTies(lastRank,complete);
 }
 $('poDet').addEventListener('click',function(e){
   var b=e.target.closest('button');if(!b)return;
@@ -1020,7 +1093,7 @@ $('roundBody').addEventListener('click',function(e){
 /* Clear everything and start over at player entry. The old game is kept in Games first. */
 function startOver(){
   if(G.started||playedCount(G)>0){var cp=JSON.parse(JSON.stringify(G));cp.id=uid();cp.name=G.name+' (before clear)';cp.u=Date.now()-1;R.games[cp.id]=cp}
-  G.scores={};G.names=Array(8).fill('');G.paid=Array(8).fill(false);G.po=cleanPo();G.fin=cleanFin();G.champ=null;G.started=false;editing=false;R.round=0;R.view='scores';
+  G.scores={};G.names=Array(8).fill('');G.paid=Array(8).fill(false);G.po=cleanPo();G.fin=cleanFin();G.champ=null;G.settle=[];G.started=false;editing=false;R.round=0;R.view='scores';
   touch();renderAll();window.scrollTo(0,0);toast('Everything cleared. The old round robin is kept in Round Robins.');
 }
 function armBtn(btn,idle,armedText){
@@ -1057,7 +1130,7 @@ function renderAll(){
 /* ---------- player card ---------- */
 var curP=0;
 function openPlayer(i){
-  curP=i;var c=compute(),P=c.P.slice().sort(cmpP),rank=P.findIndex(function(q){return q.i===i})+1,st=c.P[i];
+  curP=i;var c=compute(),P=computeRank(c.P).P,rank=P.findIndex(function(q){return q.i===i})+1,st=c.P[i];
   var diff=st.pf-st.pa;
   var h='<div class="ph"><button type="button" data-pn="-1" aria-label="Previous player">&#8249;</button><div class="pn"><b>'+esc(nm(i))+'</b><small>'+(c.done?('#'+rank+' of 8'+(rank<=4?' \u00b7 top 4':'')):'No games yet')+'</small></div><button type="button" data-pn="1" aria-label="Next player">&#8250;</button><button type="button" data-pc="1" aria-label="Close">&#10005;</button></div>';
   h+='<div class="tiles"><div class="big"><b>'+st.w+'-'+st.l+'</b><small>Record</small></div><div><b>'+(diff>0?'+':'')+diff+'</b><small>Differential</small></div><div><b>'+st.lp+'</b><small>Pts in losses</small></div><div><b>'+st.pf+'</b><small>Points for</small></div><div><b>'+st.pa+'</b><small>Points against</small></div><div><b>'+(st.w+st.l?(st.pf/(st.w+st.l)).toFixed(1):'0')+'</b><small>Avg scored</small></div></div>';

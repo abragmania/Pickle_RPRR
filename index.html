@@ -279,6 +279,7 @@ details.adv[open] summary{border-bottom:1px solid var(--line);margin-bottom:6px}
 .tiebox p.st{margin:2px 0 0;font-size:13px;opacity:.95}
 .settle{margin-top:6px}
 .settle>span{display:block;font-weight:600;font-size:13px;margin-bottom:4px}
+#poTie:empty{display:none}
 /* paid */
 .nf{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pd{display:inline-flex;align-items:center;gap:8px;min-height:36px;font:700 13px var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);cursor:pointer}
@@ -396,6 +397,7 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
         <p class="hint" id="standHint" style="margin-top:8px"></p>
         <p class="hint">Tap a player to see all their games, partners and opponents. Players tagged <span class="paid">paid</span> have paid (<span id="paidHint"></span>).</p>
       </div>
+      <div id="poTie"></div>
       <div class="panel">
         <details class="adv" id="tbdet"><summary><span>Tiebreak rules</span><em class="tg"></em><small id="tbNow"></small></summary>
           <p class="hint" style="margin-bottom:6px">Players level on record are split by these, in this order. Head-to-head counts wins minus losses in matches where the tied players faced each other. Turn any off or move them up and down. Standings update right away.</p>
@@ -408,7 +410,6 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
         <div class="seeds" id="seeds"></div>
         <div id="poTeams" class="stack" style="gap:6px"></div>
         <p class="payline" id="poPay"></p>
-        <div id="poTie"></div>
         <details class="adv" id="poDet"><summary><span>Playoff options</span><em class="tg"></em><small id="poNow"></small></summary>
           <div class="opts">
             <h4>Partners</h4>

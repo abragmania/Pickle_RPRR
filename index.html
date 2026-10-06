@@ -55,7 +55,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .brand{flex:1;min-width:0;line-height:.9}
 .brand b{display:block;font:italic 800 24px/.95 var(--f-disp);letter-spacing:.02em;text-transform:uppercase}
 .brand b{white-space:nowrap}
-@media (max-width:430px){.brand{display:none}.hd .wrap{gap:6px}.hb{font-size:13px;padding:0 10px;letter-spacing:.06em;flex:1}.hb:nth-of-type(2){flex:1.7}}
+@media (max-width:430px){.brand{display:none}.hd .wrap{gap:6px}.hb{font-size:13px;padding:0 10px;letter-spacing:.06em;flex:1}#bGames{flex:1.7}}
 .brand small{font:600 11px var(--f-disp);letter-spacing:.22em;text-transform:uppercase;opacity:.8}
 .hb{min-height:44px;padding:0 11px;border-radius:22px;border:2px solid rgba(255,255,255,.35);background:transparent;color:var(--court-ink);font:700 15px var(--f-disp);letter-spacing:.08em;text-transform:uppercase}
 .hb.hc{border-color:#ff9d92;color:#ffd9d4}
@@ -267,6 +267,11 @@ details.adv[open] summary{border-bottom:1px solid var(--line);margin-bottom:6px}
 .pcard .l2{min-width:0;color:var(--muted)}
 .pcard .fit{display:block;min-width:0;overflow:hidden;white-space:nowrap}
 .pcard h3 .fit{display:block}
+.trio{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:8px}
+.trio .btn{padding:0 8px;font-size:15px;line-height:1.1}
+.btn.big{min-height:68px;font-size:26px;letter-spacing:.16em;border-radius:14px}
+.home{display:flex;align-items:center;gap:10px;flex:1;min-width:0;background:none;border:0;padding:0;color:inherit;text-align:left}
+@media (max-width:430px){.home{flex:none}}
 /* paid */
 .nf{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pd{display:inline-flex;align-items:center;gap:8px;min-height:36px;font:700 13px var(--f-disp);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);cursor:pointer}
@@ -330,8 +335,10 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
 </head>
 <body>
 <header class="hd"><div class="wrap">
+  <button type="button" class="home" id="bHome" aria-label="Back to the start screen">
   <div class="logo" aria-hidden="true"><i style="left:9px;top:8px"></i><i style="left:22px;top:10px"></i><i style="left:14px;top:17px"></i><i style="left:25px;top:23px"></i><i style="left:8px;top:25px"></i></div>
   <div class="brand"><b>Pickle RR</b><small>Round robin</small></div>
+  </button>
   <button class="hb" id="bShare" type="button">Share</button>
   <button class="hb" id="bGames" type="button">Round Robins</button>
   <button class="hb hc" id="bClear" type="button">Clear</button>
@@ -346,11 +353,12 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
         <p class="lead" id="setupLead"></p>
         <div class="names" id="names"></div>
         <p class="hint" id="paidN"></p>
-        <div class="row">
-          <button class="btn" id="shuffle" type="button">Shuffle order</button>
-          <button class="btn" id="clrNames" type="button">Clear names</button>
-          <button class="btn primary" id="go" type="button" style="flex:1">Start</button>
+        <div class="trio">
+          <button class="btn" id="shuffle" type="button">Shuffle</button>
+          <button class="btn" id="clrNames" type="button">Clear</button>
+          <button class="btn" id="rand" type="button">Randomize &amp; Run</button>
         </div>
+        <button class="btn primary big" id="go" type="button">Start</button>
       </div>
     </section>
 
@@ -590,9 +598,9 @@ function paidCount(){var n=G.paid.filter(Boolean).length;$('paidN').textContent=
 function renderSetup(){
   var h='';for(var i=0;i<8;i++)h+='<div class="nf"><label>Player '+(i+1)+'<input class="t" id="n'+i+'" type="text" autocomplete="off" autocapitalize="words" enterkeyhint="next" value="'+esc(G.names[i])+'" placeholder="Name"></label><label class="pd"><input type="checkbox" id="pd'+i+'"'+(G.paid[i]?' checked':'')+'><span>Paid</span></label></div>';
   $('names').innerHTML=h;
-  $('go').textContent=editing?'Save names':'Start the round robin';
+  $('go').textContent=editing?'Done':'Start';
   $('setupLead').textContent=editing?'Fix a spelling or swap names. Scores stay where they are.':'Add the 8 players. Everyone partners with each other player once and faces each player twice over 7 rounds. Order decides who starts where, so shuffle for a fair draw.';
-  $('shuffle').hidden=editing;
+  $('shuffle').hidden=editing;$('rand').hidden=editing;
   for(var j=0;j<8;j++)(function(j){$('n'+j).addEventListener('input',function(e){G.names[j]=e.target.value;touch()});$('pd'+j).addEventListener('change',function(e){G.paid[j]=e.target.checked;touch();paidCount()})})(j);
   paidCount();
 }
@@ -602,10 +610,35 @@ $('shuffle').onclick=function(){
   G.names=a.map(function(x){return x[0]});G.paid=a.map(function(x){return !!x[1]});touch();renderSetup();
 };
 $('clrNames').onclick=function(){G.names=Array(8).fill('');touch();renderSetup();var f=$('n0');if(f)f.focus()};
+var POOL=['Alex','Blake','Casey','Drew','Emery','Finn','Gray','Harper','Indy','Jules','Kai','Logan','Morgan','Noel','Quinn','Reese','Sage','Taylor','Wren','Zion'];
+function rnd(n){return Math.floor(Math.random()*n)}
+function randomizeRun(){
+  if(G.started||playedCount(G)>0){var cp=JSON.parse(JSON.stringify(G));cp.id=uid();cp.name=G.name+' (before demo)';cp.u=Date.now()-1;R.games[cp.id]=cp}
+  var pool=POOL.slice(),names=[];for(var i=0;i<8;i++)names.push(pool.splice(rnd(pool.length),1)[0]);
+  G.names=names;G.paid=names.map(function(){return Math.random()<.7});
+  G.scores={};
+  for(var r=0;r<7;r++)for(var m=0;m<2;m++){
+    var w=rnd(2),sc=['',''];
+    if(Math.random()<.06){var hi=5+rnd(6);sc[w]=String(hi);sc[1-w]=String(rnd(hi))}else{sc[w]='11';sc[1-w]=String(rnd(11))}
+    G.scores[r+'-'+m]=sc;
+  }
+  var fmt=Math.random()<.5?'pick':'p14';
+  G.po=cleanPo({fmt:fmt,pick:fmt==='pick'?1+rnd(3):null,pay:Math.random()<.5?'wta':'back',buyin:'20'});
+  var f=[1,3,5][rnd(3)],need=Math.ceil(f/2),wa=0,wb=0,g=[];
+  for(var k=0;k<5;k++){
+    if(k>=f||wa>=need||wb>=need){g.push(['','']);continue}
+    var w2=rnd(2),s2=['',''];s2[w2]='11';s2[1-w2]=String(rnd(10));g.push(s2);if(w2===0)wa++;else wb++;
+  }
+  G.fin=cleanFin({fmt:f,g:g});
+  G.name='Demo '+fmtDate(Date.now());G.started=true;editing=false;R.round=6;R.court=1;R.view='stand';
+  touch();renderAll();window.scrollTo(0,0);toast('Demo filled in. Tap Clear to start over.');
+}
+$('rand').onclick=randomizeRun;
 $('go').onclick=function(){
   for(var i=0;i<8;i++){G.names[i]=$('n'+i).value.trim();G.paid[i]=$('pd'+i).checked}
   G.started=true;editing=false;R.view='scores';touch();renderAll();
 };
+$('bHome').onclick=function(){if(R.view==='games')R.view='scores';if(G.started)editing=true;persist();renderAll();window.scrollTo(0,0)};
 $('editNames').onclick=function(){editing=true;R.view='scores';persist();renderAll()};
 
 /* ---------- scores: one game at a time. Pick the winner, tap the losing score. ---------- */

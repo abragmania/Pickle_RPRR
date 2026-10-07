@@ -16,7 +16,7 @@
 1. No planned work. Wait for Adam's next request; ideas he declined or deferred are not on any list.
 
 ### Waiting on Adam (each runs on its default until he answers; raised again at every checkpoint)
-- This public repo now also holds the project documents and agent files (scrubbed of his name, email and folder paths), though the global rule says a public repo holds only the site. Default: keep them here. Lean: keep, since the folder is the site.
+- Nothing.
 
 ### Watch (found, not started; one fix each)
 - Nothing.

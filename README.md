@@ -1,15 +1,17 @@
 # Pickle RR
 
-Free 8-player rotating-partner pickleball round robin. Installs to a phone home screen, works offline, saves every score automatically, and any game can be shared as a link.
+Free 8-player rotating-partner pickleball round robin. Enter 8 names, score 14 games over 7 rounds, and the app ranks everyone, finds the top 4, runs the playoff and finals, and shows payouts. It installs to a phone home screen, works offline after the first visit, saves every score automatically, and any game can be shared as a link.
 
 Live: https://abragmania.github.io/Pickle_RPRR/
 
-Single static page (index.html), no build step. Schedule: 7 rounds, 2 courts; every pair partners once and opposes twice.
+## Run
+It is one static page (`index.html`) with no build step and no packages. To try a change, serve this folder (`python -m http.server 8765` in the project folder) and open `http://localhost:8765/index.html`; stop that server by its port. Check the script block with `node` by wrapping it in `new Function(...)` (there is no test suite).
 
 ## How it is published
+This folder is the public repository. GitHub Pages serves the `main` branch directly, so publishing is `git push` and GitHub rebuilds the site in a few minutes. There is no separate site copy and no publish script. Commits use the machine's global identity (the GitHub no-reply address), never a personal email. History was replaced by one commit on 2026-10-06 (ARCHIVE.md).
 
-This folder is the public repository. GitHub Pages serves the `main` branch directly, so publishing is `git push` and GitHub builds the site. There is no separate site copy and no build step. Commits use the machine's global identity (the GitHub no-reply address), never a personal email.
+## Saved data
+Everything lives in the visitor's own browser storage; nothing is sent anywhere. Each change autosaves; removing a round robin moves it to a removed list (it can be restored or deleted for good); Clear and Randomize & Run keep a copy of the earlier game; a backup can be copied or saved from the Round Robins screen; a share link carries one whole game and merges in without overwriting newer scores.
 
-## Setup on another machine
-
-The history of this repository was replaced with a single commit. On any other machine that already has a copy, run `git fetch origin && git reset --soft origin/main` once in this folder (or re-clone) before the next push.
+## Two machines
+GitHub is the only bridge. `.claude/settings.json` runs `tools/session_start.sh` at every context load: it pulls fast-forward only and reports what came down, uncommitted or unpushed work, the size of the router and tracker, and installs the commit check (`tools/hooks/pre-commit`). One-time per-machine steps live on the PROJECT.md tracker.

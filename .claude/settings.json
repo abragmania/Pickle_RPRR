@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash tools/session_start.sh 2>&1 || true",
+            "timeout": 60,
+            "statusMessage": "Pulling from GitHub..."
+          }
+        ]
+      }
+    ]
+  }
+}

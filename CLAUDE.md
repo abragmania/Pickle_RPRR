@@ -13,12 +13,12 @@ No plan, scout, trim or freshness agent: this is a one-page app. Skip freshness 
 
 ## Proportion
 Verification is sized to what the change can break; 🔵 on every scoring, ranking or saved-data change and 👁 on every layout change always stay.
-- Docs-only commit: the doc checks only. Code: a syntax check of the script block plus one run of the changed logic in a browser; there is no test suite.
+- Docs-only commit: the doc checks only. Code: a syntax check of the script block, `node --test` (zero failures), and one run of the changed screen in a browser. A change to scoring, ranking, ties, finals or payouts also adds or updates a test.
 - Briefs name only the pages and size a change can affect: Scores, Schedule, Grid, Standings, Round Robins at 375x812. One label, color or font: one render. Look-and-feel work shows Adam a first draft before finishing.
 - Budgets are the global starting numbers; review rounds: 👁 judges a layout change once, a fix to its findings gets one render check by the lead.
 
 ## Rules specific to this project
 - Public repository (GitHub Pages serves `main`): nothing in any file or commit carries Adam's full name, his email or a computer name or folder path; "Adam" alone and `abragmania` are fine. Commits use the machine's global no-reply identity.
 - Scores must never be lost: every change autosaves, removing a game only moves it to Removed round robins, and Clear keeps a "(before clear)" copy (README, "Saved data").
-- Test locally by serving the folder on port 8765 (README, "Run"); stop that server only by its port.
+- Test locally by serving the folder on port 8791 (README, "Run"); stop that server only by its port.
 - Two machines: the SessionStart hook pulls fast-forward only and reports; repeat its report to Adam first, then continue from Next. Publishing is `git push`; GitHub rebuilds the site in a few minutes.

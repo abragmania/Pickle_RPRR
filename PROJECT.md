@@ -3,24 +3,21 @@
 ## Part 1 — Tracker (one line per item; rewritten at checkpoints, never play-by-play; finished items move to ARCHIVE.md at the next checkpoint)
 
 ### Done since the last checkpoint
-- (fd37467) The address bar now refreshes at most every 1.5 seconds so Safari's limit is never hit; saving is unaffected.
-- (3f6bb29) Randomize & Run no longer stacks "(before demo)" backup copies.
-- (cc8ae39, e02fe0c) Every tie touching the top 4 is settled and explained in one box above Tiebreak rules; head-to-head is an optional tiebreak (D1, D2).
-- (efb1f65) The logo returns to the entry screen, Start is large on its own row, Randomize & Run fills a whole demo.
-- The light project kit (router, tracker, rulings, archive, four agents, session start, doc gate) was added on 2026-10-07.
+- Retro build (D5): scores over 11 are flagged and never counted, nothing is erased; one payouts() helper; ranking, finals and payout logic moved to logic.js with 8 Node tests; reviewed by code-review, smoke-tested in the browser.
+- The test server port in the docs moved from 8765 (another project uses it) to 8791.
 
 ### In progress
 - Nothing.
 
 ### Next
-1. No planned work. Wait for Adam's next request; ideas he declined or deferred are not on any list.
+1. Wait for Adam's answers on the two Waiting items and for his next request.
 
 ### Waiting on Adam (each runs on its default until he answers; raised again at every checkpoint)
-- Nothing.
+- 🔴 1. Un-minify the one-line functions in index.html source (retro gap 4)? Default: leave as is, new code is written readable. Lean: yes, as its own commit once the tests exist.
+- 🔴 2. Replace the "Demo " name-prefix check with a demo flag on the game, and set the champion where finals scores change instead of while drawing (retro gap 5)? Default: keep as is. Lean: yes.
 
 ### Watch (found, not started; one fix each)
-- Nothing.
-
+- Retro 2026-10-10 gaps 1-3 (scores never validated, no tests, duplicated payouts) are fixed; gaps 4 (minified functions) and 5 (demo found by name, champion set while drawing) are the two Waiting items.
 ### FIRST LAPTOP SESSION BACK (run without being asked; delete each line when done)
 - If this machine had a copy from before 2026-10-06, run `git fetch origin && git reset --soft origin/main` once (the history was replaced by one commit), then delete this line.
 
@@ -30,7 +27,7 @@
 Finished; there is no open plan. Every step is in ARCHIVE.md.
 
 ## Part 3 — Specs (the standing reference for reviewers)
-- **One file:** `index.html` holds the whole app (markup, styles, script). `sw.js` is the offline cache (network first), `manifest.webmanifest` and the three icon files make it installable. No build step, no packages, no server.
+- **Files:** `index.html` holds the app (markup, styles, screen code). `logic.js` holds the pure ranking, tiebreak, finals and payout logic (plain script, importable by Node); `tests/logic.test.js` tests it (`node --test`). `sw.js` is the offline cache (network first, precaches logic.js), `manifest.webmanifest` and the icons make it installable. No build step, no packages, no server.
 - **Screens:** entry (8 names, Paid boxes, Shuffle, Clear, Randomize & Run, Start); Scores (round buttons 1-7, the round's two matchups, Court 1 / Court 2 tabs, pick the winner then the losing score, or enter both by hand); Schedule (all 7 rounds, copy as text); Grid (4 player cards across, full names that shrink to fit); Standings (table, ties box, Tiebreak rules, Playoff, Finals, champions); Round Robins (saved games, backup, restore).
 - **Saved data:** browser storage key `pbrr-v2` holds every game (names, paid flags, scores, tiebreak order, ties settled by hand, playoff choices, finals scores) plus a removed list; the previous copy is kept under `pbrr-v2-prev`. A share link carries one whole game in its address after `#g=`; opening one merges it in and never overwrites newer local scores.
 - **Ranking:** D1 and D2 in DECISIONS.md. A tie that survives every tiebreak is settled by the user tapping who finishes ahead (stored per game); settled and tiebroken ranks are marked tb, po or =.

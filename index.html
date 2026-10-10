@@ -217,6 +217,7 @@ details.adv summary{cursor:pointer;font:700 14px var(--f-disp);letter-spacing:.1
 .fd{text-align:center;font:800 22px var(--f-disp);color:var(--muted)}
 .fr input{min-height:54px;min-width:0;width:100%;text-align:center;font:800 30px var(--f-disp);border:2px solid var(--line);border-radius:12px;background:var(--bg);padding:0}
 .fr input.w{border-color:var(--win);background:color-mix(in srgb,var(--ball) 35%,var(--surface))}
+.fr input.sa.bad,.fr input.sb.bad{border-color:#d93a3a}
 .champ{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;color:var(--court-ink);background:radial-gradient(circle at 85% -20%,rgba(217,236,60,.45),transparent 55%),linear-gradient(135deg,var(--court),var(--court2));box-shadow:var(--shadow)}
 .champ::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-20deg);animation:shine 3.4s ease-in-out infinite}
 @keyframes shine{0%,55%{left:-60%}100%{left:130%}}
@@ -474,26 +475,11 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
 <canvas id="cf" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40" hidden></canvas>
 <div class="toast" id="toast" hidden></div>
 
+<script src="logic.js"></script>
 <script>
-/* Balanced schedule (verified by computer): every pair partners once and opposes twice. Numbers are seat slots 0-7. */
-var SCHED=[
- [[[0,1],[2,3]],[[4,5],[6,7]]],
- [[[0,2],[4,6]],[[1,3],[5,7]]],
- [[[0,3],[4,7]],[[1,2],[5,6]]],
- [[[0,4],[1,5]],[[2,6],[3,7]]],
- [[[0,5],[2,7]],[[1,4],[3,6]]],
- [[[0,6],[3,5]],[[1,7],[2,4]]],
- [[[0,7],[1,6]],[[2,5],[3,4]]]
-];
-var CRIT={
-  w:{name:'Record (wins)',f:function(p){return p.w}},
-  lp:{name:'Points in losses',f:function(p){return p.lp}},
-  diff:{name:'Point differential',f:function(p){return p.pf-p.pa}},
-  pf:{name:'Total points scored',f:function(p){return p.pf}},
-  pa:{name:'Fewest points allowed',f:function(p){return -p.pa}},
-  h2h:{name:'Head-to-head',f:function(p){return 0}}
-};
-var DEF_ORDER=['w','lp','diff','pf','pa','h2h'],DEF_OFF=['pa','h2h'];
+if(typeof PBRR==='undefined'){document.body.textContent='Could not load the app. Reconnect and reload.';throw new Error('logic.js did not load')}
+/* Schedule, ranking criteria and the pure scoring logic live in logic.js (PBRR); these names keep the old callers working. */
+var SCHED=PBRR.SCHED,CRIT=PBRR.CRIT,DEF_ORDER=PBRR.DEF_ORDER,DEF_OFF=PBRR.DEF_OFF,validScore=PBRR.validScore;
 var KEY='pbrr-v2',PREV='pbrr-v2-prev';
 var R={games:{},trash:[],cur:null,view:'scores',round:0,court:0,manual:false};
 var G=null,editing=false,lastSaveOk=true;
@@ -589,73 +575,20 @@ function shorts(len){
   return out;
 }
 function getScore(r,m){return G.scores[r+'-'+m]||['','']}
-function decided(r,m,g){var s=(g||G).scores[r+'-'+m]||['',''];if(s[0]===''||s[1]===''||s[0]==null||s[1]==null)return false;return +s[0]!==+s[1]}
-function validGame(a,b){a=+a;b=+b;return Math.max(a,b)===11&&Math.min(a,b)<=10}
+function decided(r,m,g){return PBRR.decided(g||G,r,m)}
 function playedCount(g){var n=0;for(var r=0;r<7;r++)for(var m=0;m<2;m++)if(decided(r,m,g))n++;return n}
 function roundDone(r){return decided(r,0)&&decided(r,1)}
 function firstOpenRound(){for(var r=0;r<7;r++)if(!roundDone(r))return r;return 6}
 
 /* ---------- stats and tiebreaks ---------- */
-function compute(){
-  var P=[];for(var i=0;i<8;i++)P.push({i:i,w:0,l:0,pf:0,pa:0,lp:0});
-  var done=0;
-  SCHED.forEach(function(rd,r){rd.forEach(function(mt,m){
-    if(!decided(r,m))return;done++;
-    var sc=getScore(r,m).map(Number);
-    [0,1].forEach(function(t){var ts=sc[t],os=sc[1-t];
-      mt[t].forEach(function(p){var o=P[p];o.pf+=ts;o.pa+=os;if(ts>os)o.w++;else{o.l++;o.lp+=ts}})})
-  })});
-  return {P:P,done:done};
-}
-function activeCrit(){return G.tb.filter(function(k){return G.off.indexOf(k)<0})}
+function compute(){return PBRR.compute(G)}
+function activeCrit(){return PBRR.activeCrit(G)}
 function critName(c){return c==='manual'?'Play-off / coin flip':CRIT[c].name}
-function h2hNet(list){
-  var set={},net={};list.forEach(function(p){set[p.i]=1;net[p.i]=0});
-  SCHED.forEach(function(rd,r){rd.forEach(function(mt,m){
-    if(!decided(r,m))return;var sc=getScore(r,m).map(Number);
-    for(var t=0;t<2;t++){var w=sc[t]>sc[1-t];
-      mt[t].forEach(function(x){if(!set[x])return;mt[1-t].forEach(function(y){if(set[y])net[x]+=w?1:-1})})}
-  })});
-  return net;
-}
-function keyFnFor(c,list){
-  if(c==='h2h'){var net=h2hNet(list);return function(p){return net[p.i]}}
-  if(c==='manual')return function(p){var ix=G.settle.indexOf(p.i);return ix<0?-1000:-ix};
-  return CRIT[c].f;
-}
-/* split a list by one criterion at a time; whatever stays level moves on to the next criterion */
-function resolveGroup(list,crits,steps){
-  if(list.length<=1||!crits.length)return [list];
-  var c=crits[0],f=keyFnFor(c,list);
-  var scored=list.map(function(p){return {p:p,k:f(p)}}).sort(function(a,b){return b.k-a.k});
-  var groups=[];
-  scored.forEach(function(x){var g=groups[groups.length-1];if(g&&g.k===x.k)g.ps.push(x.p);else groups.push({k:x.k,ps:[x.p]})});
-  var distinct=groups.length>1;
-  if(c!=='manual'||distinct)steps.push({crit:c,vals:scored,distinct:distinct});
-  if(c==='manual'&&distinct)list.forEach(function(p){p.man=true});
-  if(!distinct)return resolveGroup(list,crits.slice(1),steps);
-  var out=[];
-  groups.forEach(function(g){out=out.concat(g.ps.length>1?resolveGroup(g.ps,crits.slice(1),steps):[g.ps])});
-  return out;
-}
-/* full ranking: groups by the first criterion (record), then breaks each tie and notes how */
-function computeRank(Pobj){
-  var crits=activeCrit().concat(['manual']),first=crits[0],f0=keyFnFor(first,Pobj);
-  Pobj.forEach(function(p){p.tier=null;p.how='';p.man=false});
-  var scored=Pobj.map(function(p){return {p:p,k:f0(p)}}).sort(function(a,b){return b.k-a.k});
-  var groups=[];
-  scored.forEach(function(x){var g=groups[groups.length-1];if(g&&g.k===x.k)g.ps.push(x.p);else groups.push({k:x.k,ps:[x.p]})});
-  var order=[],ties=[],tid=0;
-  groups.forEach(function(g){
-    if(g.ps.length===1){order.push(g.ps[0]);return}
-    var steps=[],tiers=resolveGroup(g.ps,crits.slice(1),steps),flat=[];
-    tiers.forEach(function(t){flat=flat.concat(t);if(t.length>1){tid++;t.forEach(function(p){p.tier='t'+tid})}});
-    flat.forEach(function(p){p.how=p.tier?'tie':(p.man?'po':'tb')});
-    ties.push({players:flat,start:order.length,end:order.length+flat.length-1,steps:steps,tiers:tiers});
-    order=order.concat(flat);
-  });
-  return {P:order,ties:ties,first:first};
-}
+function h2hNet(list){return PBRR.h2hNet(G,list)}
+function keyFnFor(c,list){return PBRR.keyFnFor(G,c,list)}
+function resolveGroup(list,crits,steps){return PBRR.resolveGroup(G,list,crits,steps)}
+/* full ranking (sets p.tier, p.how, p.man on the player objects) */
+function computeRank(Pobj){return PBRR.computeRank(G,Pobj)}
 var lastRank=null;
 function ordn(n){return ['1st','2nd','3rd','4th','5th','6th','7th','8th'][n-1]||(n+'th')}
 
@@ -767,6 +700,7 @@ function refreshMatch(){
   pr.textContent=R.manual?'Enter both scores. The leader counts as the winner.':'1 · Pick the winner';pr.classList.toggle('done',w!==-1&&!R.manual);
   var note=$('note'),msg='',bad=false;
   if(sc[0]!==''&&sc[1]!==''&&+sc[0]===+sc[1]){msg='Scores are tied. Someone has to be ahead.';bad=true}
+  else if(sc[0]!==''&&sc[1]!==''&&!dec){msg='A game goes to 11, so '+sc[0]+'-'+sc[1]+' is not counted. Fix the score.';bad=true}
   else if(dec&&+sc[w]!==11)msg='Cut short at '+sc[0]+'-'+sc[1]+'. The leader counts as the win.';
   note.textContent=msg;note.hidden=!msg;note.classList.toggle('bad',bad);
 }
@@ -868,6 +802,8 @@ function renderStand(){
   var okNow=b.indexOf('banner ok')>=0;if(okNow&&!lastOk&&R.view==='stand')confetti();lastOk=okNow;
   $('banner').innerHTML=b;
   $('standHint').textContent=complete?'All 14 matches are in. The top 4 advance. Marks: tb = tie split by a tiebreaker, po = settled by play-off or coin flip, = = still level.':'Provisional: '+c.done+' of 14 matches scored. Top 4 advance.';
+  var nBad=Object.keys(G.scores).filter(function(k){var s=G.scores[k];return s&&s[0]!==''&&s[1]!==''&&+s[0]!==+s[1]&&!PBRR.validScore(s[0],s[1])}).length;
+  if(nBad)$('standHint').textContent+=' '+nBad+(nBad===1?' score is':' scores are')+' not counted (a game goes to 11); fix '+(nBad===1?'it':'them')+' on the Scores page.';
   renderPlayoff(P,c,complete);renderFinals(fs);
   $('paidHint').textContent=G.paid.filter(Boolean).length+' of 8';
   renderTb();
@@ -922,9 +858,9 @@ function renderPlayoff(P,c,complete){
     if(po.pick){var o=[1,2,3].filter(function(k){return k!==po.pick});t+='<div class="pt"><span>Team A</span><div>'+T(0,po.pick)+'</div></div><div class="pt"><span>Team B</span><div>'+T(o[0],o[1])+'</div></div>'}
   }else t='<div class="pt"><span>#1 plays with</span><div class="picks">'+[1,2,3].map(function(k){return '<button type="button" class="pk'+(po.pick===k?' on':'')+'" data-pk="'+k+'">#'+(k+1)+' '+esc(nm(S[k].i))+'</button>'}).join('')+'</div></div>'+(po.pick?(function(){var o=[1,2,3].filter(function(k){return k!==po.pick});return '<div class="pt"><span>Team A</span><div>'+T(0,po.pick)+'</div></div><div class="pt"><span>Team B</span><div>'+T(o[0],o[1])+'</div></div>'})():'');
   $('poTeams').innerHTML=t;
-  var b=parseFloat(po.buyin),np=G.paid.filter(Boolean).length||8,pay;
-  if(!(b>0))pay='Add the buy-in under Playoff options to see payouts.';
-  else{var pot=b*np;pay='Pot '+money(pot)+' ('+np+(G.paid.some(Boolean)?' paid':' players')+') \u00b7 '+(po.pay==='wta'?'each winner '+money(pot/2):'each winner '+money((pot-2*b)/2)+' \u00b7 each runner-up '+money(b)+' back')}
+  var pp=PBRR.payouts(po,G.paid.filter(Boolean).length),pay;
+  if(!pp)pay='Add the buy-in under Playoff options to see payouts.';
+  else pay='Pot '+money(pp.pot)+' ('+pp.np+(G.paid.some(Boolean)?' paid':' players')+') \u00b7 '+(po.pay==='wta'?'each winner '+money(pp.winner):'each winner '+money(pp.winner)+' \u00b7 each runner-up '+money(pp.runnerUp)+' back');
   $('poPay').textContent=pay;
   $('poNow').textContent=FMT[po.fmt]+' \u00b7 '+PAY[po.pay];
   document.querySelectorAll('#poFmt button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.fmt===po.fmt)});
@@ -940,27 +876,8 @@ $('poDet').addEventListener('click',function(e){
 $('bracketBox').addEventListener('click',function(e){var b=e.target.closest('.pk');if(!b)return;var k=+b.dataset.pk;G.po.pick=(G.po.pick===k)?null:k;touch();renderStand()});
 $('buyin').addEventListener('input',function(e){G.po.buyin=e.target.value.replace(/[^0-9.]/g,'').slice(0,7);e.target.value=G.po.buyin;touch();renderStand()});
 /* ---------- finals: score entry, champions ---------- */
-function finTeams(S){
-  var po=G.po;
-  if(po.fmt==='p14')return {A:[S[0].i,S[3].i],B:[S[1].i,S[2].i]};
-  if(po.pick){var o=[1,2,3].filter(function(k){return k!==po.pick});return {A:[S[0].i,S[po.pick].i],B:[S[o[0]].i,S[o[1]].i]}}
-  return null;
-}
-function finState(P,complete){
-  ensureFin(G);var out={show:complete,tm:null,rows:[],wa:0,wb:0,champ:null,need:Math.ceil(G.fin.fmt/2)};
-  if(!complete)return out;
-  out.tm=finTeams(P.slice(0,4));if(!out.tm)return out;
-  out.over=G.fin.fmt;var stopped=false;
-  for(var k=0;k<G.fin.fmt;k++){
-    out.rows.push(k);
-    if(stopped||out.over<G.fin.fmt)continue;
-    var g=G.fin.g[k];
-    if(g[0]!==''&&g[1]!==''&&+g[0]!==+g[1]){if(+g[0]>+g[1])out.wa++;else out.wb++;if(out.wa>=out.need||out.wb>=out.need)out.over=k+1}
-    else stopped=true;
-  }
-  if(out.wa>=out.need)out.champ=out.tm.A;else if(out.wb>=out.need)out.champ=out.tm.B;
-  return out;
-}
+function finTeams(S){return PBRR.finTeams(G,S)}
+function finState(P,complete){ensureFin(G);return PBRR.finState(G,P,complete)}
 var lastChamp='';
 function renderFinals(fs){
   var box=$('finBox');box.hidden=!fs.show;
@@ -974,8 +891,8 @@ function renderFinals(fs){
       var ae=document.activeElement,aid=ae&&ae.id&&ae.id.indexOf('f')===0?ae.id:null;
       var h='<div class="fr fh"><span></span><div class="th a"><small>Team A</small>'+tn(fs.tm.A)+'</div><span></span><div class="th b"><small>Team B</small>'+tn(fs.tm.B)+'</div></div>';
       fs.rows.forEach(function(k){
-        var g=G.fin.g[k],d=g[0]!==''&&g[1]!==''&&+g[0]!==+g[1],wa=d&&+g[0]>+g[1],wb=d&&+g[1]>+g[0];
-        h+='<div class="fr'+(k>=fs.over?' extra':'')+'"><span class="fl">Game '+(k+1)+(k>=fs.over?'<small>not needed</small>':(k>0?'<small>if needed</small>':''))+'</span><input id="f'+k+'a" class="sa'+(wa?' w':'')+'" data-k="'+k+'" data-t="0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Game '+(k+1)+' Team A score" value="'+esc(g[0])+'"><span class="fd">\u2013</span><input id="f'+k+'b" class="sb'+(wb?' w':'')+'" data-k="'+k+'" data-t="1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Game '+(k+1)+' Team B score" value="'+esc(g[1])+'"></div>';
+        var g=G.fin.g[k],d=validScore(g[0],g[1]),wa=d&&+g[0]>+g[1],wb=d&&+g[1]>+g[0],bd=!d&&g[0]!==''&&g[1]!==''&&+g[0]!==+g[1]?' bad':'';
+        h+='<div class="fr'+(k>=fs.over?' extra':'')+'"><span class="fl">Game '+(k+1)+(k>=fs.over?'<small>not needed</small>':(k>0?'<small>if needed</small>':''))+'</span><input id="f'+k+'a" class="sa'+(wa?' w':'')+bd+'" data-k="'+k+'" data-t="0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Game '+(k+1)+' Team A score" value="'+esc(g[0])+'"><span class="fd">\u2013</span><input id="f'+k+'b" class="sb'+(wb?' w':'')+bd+'" data-k="'+k+'" data-t="1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Game '+(k+1)+' Team B score" value="'+esc(g[1])+'"></div>';
       });
       $('finRows').innerHTML=h;
       if(aid){var el=$(aid);if(el){el.focus();var n=el.value.length;try{el.setSelectionRange(n,n)}catch(e){}}}
@@ -990,8 +907,7 @@ function renderFinals(fs){
   var rb=$('ribbon');
   if(fs.champ){
     rb.hidden=false;rb.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7 3h10v4a5 5 0 0 1-10 0V3zM5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3M10 14h4v3h2v2H8v-2h2z" fill="currentColor"/></svg><span>Champions \u00b7 '+esc(champTxt)+'</span>';
-    var b=parseFloat(G.po.buyin),np=G.paid.filter(Boolean).length||8,money1='';
-    if(b>0){var pot=b*np;money1=G.po.pay==='wta'?pot/2:(pot-2*b)/2}
+    var pp=PBRR.payouts(G.po,G.paid.filter(Boolean).length),money1=pp?pp.winner:'';
     $('champCard').innerHTML='<div class="champ"><svg class="trophy" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3ff7a"/><stop offset="1" stop-color="#c9dd1f"/></linearGradient></defs><path d="M18 8h28v14a14 14 0 0 1-28 0V8z" fill="url(#tg)"/><path d="M18 12H8v4a9 9 0 0 0 10 9M46 12h10v4a9 9 0 0 1-10 9" fill="none" stroke="url(#tg)" stroke-width="4" stroke-linecap="round"/><path d="M28 36h8v8h-8z" fill="url(#tg)"/><path d="M20 44h24v6H20z" fill="url(#tg)"/><path d="M16 50h32v6H16z" fill="#14477a"/></svg><div class="ct"><small>Champions</small><b>'+esc(nm(fs.champ[0]))+' &amp; '+esc(nm(fs.champ[1]))+'</b><span>'+(G.fin.fmt>1?'Won the final '+series:'Won the final')+(money1!==''?' \u00b7 '+money(money1)+' each':'')+'</span></div></div>';
     if(lastChamp!==champTxt+series&&R.view==='stand')confetti();
     lastChamp=champTxt+series;

@@ -5,7 +5,7 @@ Free 8-player rotating-partner pickleball round robin. Enter 8 names, score 14 g
 Live: https://abragmania.github.io/Pickle_RPRR/
 
 ## Run
-It is one static page (`index.html`) with no build step and no packages. To try a change, serve this folder (`python -m http.server 8765` in the project folder) and open `http://localhost:8765/index.html`; stop that server by its port. Check the script block with `node` by wrapping it in `new Function(...)` (there is no test suite).
+It is one static page (`index.html`) with no build step and no packages. To try a change, serve this folder (`python -m http.server 8791` in the project folder) and open `http://localhost:8791/index.html`; stop that server by its port. Run the logic tests with `node --test` in the project folder (they cover scoring validity, ranking, tiebreaks, finals and payouts in `logic.js`), and syntax-check the page script by wrapping its script block in `new Function(...)` under node.
 
 ## How it is published
 This folder is the public repository. GitHub Pages serves the `main` branch directly, so publishing is `git push` and GitHub rebuilds the site in a few minutes. There is no separate site copy and no publish script. Commits use the machine's global identity (the GitHub no-reply address), never a personal email. History was replaced by one commit on 2026-10-06 (ARCHIVE.md).

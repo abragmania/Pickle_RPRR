@@ -20,5 +20,6 @@ Verification is sized to what the change can break; 🔵 on every scoring, ranki
 ## Rules specific to this project
 - Public repository (GitHub Pages serves `main`): nothing in any file or commit carries Adam's full name, his email or a computer name or folder path; "Adam" alone and `abragmania` are fine. Commits use the machine's global no-reply identity.
 - Scores must never be lost: every change autosaves, removing a game only moves it to Removed round robins, and Clear keeps a "(before clear)" copy (README, "Saved data").
+- `logic.js` is cached separately from `index.html` (GitHub Pages keeps files about 10 minutes), so a change that index.html depends on bumps `PBRR.version`, the `logic.js?v=N` tag and the load guard together; a test fails if they disagree.
 - Test locally by serving the folder on port 8791 (README, "Run"); stop that server only by its port.
 - Two machines: the SessionStart hook pulls fast-forward only and reports; repeat its report to Adam first, then continue from Next. Publishing is `git push`; GitHub rebuilds the site in a few minutes.

@@ -3,22 +3,22 @@
 ## Part 1 — Tracker (one line per item; rewritten at checkpoints, never play-by-play; finished items move to ARCHIVE.md at the next checkpoint)
 
 ### Done since the last checkpoint
-- (6125511) Weekly audit 2026-10-12 applied: start script at template version 4; the four agent files gained the waiting-and-budget line.
-- Roster exception filed as D6 (Adam: "Exception"); the router states the four-role roster and the reason.
+- (4e8a49f) The one-line functions in index.html are un-minified (whitespace only, proven token-identical by script).
+- Demo games carry a real `demo` flag; the champion is recomputed in touch() whenever anything that decides it changes, never while drawing; 16 Node tests including champion cases.
+- logic.js is version-stamped (`logic.js?v=3` plus a load guard and a test) and sw.js revalidates files, so a stale cached logic.js can never run with a new index.html.
 
 ### In progress
 - Nothing.
 
 ### Next
-1. Wait for Adam's answers on the two Waiting items and for his next request.
+1. Wait for Adam's next request.
 
 ### Waiting on Adam (each runs on its default until he answers; raised again at every checkpoint)
-- 🔴 1. Un-minify the one-line functions in index.html source (retro gap 4)? Default: leave as is, new code is written readable. Lean: yes, as its own commit once the tests exist.
-- 🔴 2. Replace the "Demo " name-prefix check with a demo flag on the game, and set the champion where finals scores change instead of while drawing (retro gap 5)? Default: keep as is. Lean: yes.
-
+- Nothing.
 
 ### Watch (found, not started; one fix each)
-- Retro 2026-10-10 gaps 1-3 (scores never validated, no tests, duplicated payouts) are fixed; gaps 4 (minified functions) and 5 (demo found by name, champion set while drawing) are the two Waiting items.
+- Nothing.
+
 ### FIRST LAPTOP SESSION BACK (run without being asked; delete each line when done)
 - If this machine had a copy from before 2026-10-06, run `git fetch origin && git reset --soft origin/main` once (the history was replaced by one commit), then delete this line.
 
@@ -33,4 +33,5 @@ Finished; there is no open plan. Every step is in ARCHIVE.md.
 - **Saved data:** browser storage key `pbrr-v2` holds every game (names, paid flags, scores, tiebreak order, ties settled by hand, playoff choices, finals scores) plus a removed list; the previous copy is kept under `pbrr-v2-prev`. A share link carries one whole game in its address after `#g=`; opening one merges it in and never overwrites newer local scores.
 - **Ranking:** D1 and D2 in DECISIONS.md. A tie that survives every tiebreak is settled by the user tapping who finishes ahead (stored per game); settled and tiebroken ranks are marked tb, po or =.
 - **Finals:** teams come from the top 4 seeds and the chosen partner rule; 1, 3 or 5 games; champions card, header ribbon and confetti when decided.
-- **Demo:** Randomize & Run fills 8 names (everyone paid), all 14 scores, a playoff choice and a finished finals, and keeps any earlier game as "(before demo)" except a previous demo.
+- **Demo:** Randomize & Run fills 8 names (everyone paid), all 14 scores, a playoff choice and a finished finals, and sets `demo` on the game; it keeps any earlier game as "(before demo)" unless that game is itself a demo. Renaming the game or editing names clears the flag.
+- **Champion:** `champion(g)` in logic.js derives it; `touch()` stores it in `G.champ` (Round Robins list) on every change; imports derive it too and never trust an incoming value.

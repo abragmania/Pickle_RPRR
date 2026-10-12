@@ -4,6 +4,14 @@ var test = require('node:test');
 var assert = require('node:assert');
 var PBRR = require('../logic.js');
 
+test('index.html loads and checks the same logic.js version', function () {
+  /* a stale cached logic.js must be caught: the tag's ?v= and the load guard both carry PBRR.version */
+  var html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+  assert.strictEqual(typeof PBRR.version, 'number');
+  assert.ok(html.indexOf('<script src="logic.js?v=' + PBRR.version + '"></script>') >= 0, 'script tag carries ?v=' + PBRR.version);
+  assert.ok(html.indexOf('PBRR.version!==' + PBRR.version + ')') >= 0, 'load guard compares against ' + PBRR.version);
+});
+
 /* a blank game in the saved shape; overrides replace whole fields */
 function game(over) {
   var g = {
@@ -142,6 +150,87 @@ test('payouts for winner-takes-all and buy-in back, 8 and 6 paid', function () {
   // no buy-in -> null
   assert.strictEqual(PBRR.payouts({ pay: 'wta', buyin: '' }, 8), null);
   assert.strictEqual(PBRR.payouts({ pay: 'wta', buyin: '0' }, 8), null);
+});
+
+/* A full round robin: in every match the first-listed team in SCHED wins 11-5.
+   First-listed teams: r1 [0,1] [4,5]; r2 [0,2] [1,3]; r3 [0,3] [1,2]; r4 [0,4] [2,6];
+   r5 [0,5] [1,4]; r6 [0,6] [1,7]; r7 [0,7] [2,5].
+   Wins: seat0 7, seat1 5, seat2 4, seat4 3, seat5 3, seat3 2, seat6 2, seat7 2.
+   Seats 4 and 5 are level on everything (3-4, lp 4x5=20, diff 3x6-4x6=-6, pf 33+20=53), so 4th place
+   is an unresolved top-4 tie until settled. With settle [4, 5] the seeds are 0, 1, 2, 4, and
+   '#1 & #4 vs #2 & #3' gives Team A = Ann & Eve (0, 4), Team B = Ben & Cal (1, 2). */
+function fullScores() {
+  var s = {};
+  for (var r = 0; r < 7; r++) {
+    s[r + '-0'] = ['11', '5'];
+    s[r + '-1'] = ['11', '5'];
+  }
+  return s;
+}
+function finalsGame(fmt, rows, settle) {
+  var g5 = rows.slice();
+  while (g5.length < 5) {
+    g5.push(['', '']);
+  }
+  return game({
+    scores: fullScores(),
+    settle: settle === undefined ? [4, 5] : settle,
+    po: { fmt: 'p14', pick: null, pay: 'wta', buyin: '' },
+    fin: { fmt: fmt, g: g5 }
+  });
+}
+
+test('champion: best-of-3 won 2-1 carries the series suffix', function () {
+  // A 11-8, B 11-6, A 11-9 -> Ann & Eve win 2-1
+  var c = PBRR.champion(finalsGame(3, [['11', '8'], ['6', '11'], ['11', '9']]));
+  assert.deepStrictEqual(c, { team: [0, 4], wins: 2, losses: 1, series: '2–1', text: 'Ann & Eve (2–1)' });
+});
+
+test('champion: best-of-1 has no suffix', function () {
+  // single game 7-11 -> Ben & Cal win 1-0, no '(1–0)' because fmt is 1
+  var c = PBRR.champion(finalsGame(1, [['7', '11']]));
+  assert.deepStrictEqual(c, { team: [1, 2], wins: 1, losses: 0, series: '1–0', text: 'Ben & Cal' });
+});
+
+test('champion: best-of-5 decided early ignores later rows', function () {
+  // B wins games 1-3 -> 3-0 after game 3; the 11-0 rows for A in games 4-5 do not count
+  var c = PBRR.champion(finalsGame(5, [['3', '11'], ['5', '11'], ['8', '11'], ['11', '0'], ['11', '0']]));
+  assert.strictEqual(c.text, 'Ben & Cal (3–0)');
+  assert.strictEqual(c.wins, 3);
+  assert.strictEqual(c.losses, 0);
+});
+
+test('champion changes when one finals score is edited', function () {
+  var g = finalsGame(3, [['11', '8'], ['6', '11'], ['11', '9']]);
+  assert.strictEqual(PBRR.champion(g).text, 'Ann & Eve (2–1)');
+  // game 3 corrected to 9-11 -> B wins 2-1 instead
+  g.fin.g[2] = ['9', '11'];
+  assert.strictEqual(PBRR.champion(g).text, 'Ben & Cal (2–1)');
+});
+
+test('champion: an invalid final score is not counted', function () {
+  // game 2 typed as 15-3 stops the series at A 1-0, so nobody has 2 wins yet
+  assert.strictEqual(PBRR.champion(finalsGame(3, [['11', '8'], ['15', '3'], ['11', '9']])), null);
+});
+
+test('champion waits for an unresolved top-4 tie, then appears once it is settled', function () {
+  var rows = [['11', '8'], ['11', '6']];
+  // no settle list: seats 4 and 5 still level for 4th -> no finals, no champion
+  var open = finalsGame(3, rows, []);
+  var rk = PBRR.computeRank(open, PBRR.compute(open).P);
+  assert.strictEqual(PBRR.unresolvedTop4(rk).length, 1);
+  assert.strictEqual(PBRR.unresolvedTop4(rk)[0].s, 3);
+  assert.strictEqual(PBRR.champion(open), null);
+  // settle [4, 5] -> Eve is the 4th seed, A wins 2-0
+  assert.strictEqual(PBRR.champion(finalsGame(3, rows, [4, 5])).text, 'Ann & Eve (2–0)');
+  // settle [5, 4] -> Fay is the 4th seed instead
+  assert.strictEqual(PBRR.champion(finalsGame(3, rows, [5, 4])).text, 'Ann & Fay (2–0)');
+});
+
+test('champion is null before all 14 matches are scored', function () {
+  var g = finalsGame(3, [['11', '8'], ['11', '6']]);
+  delete g.scores['6-1'];
+  assert.strictEqual(PBRR.champion(g), null);
 });
 
 test('finState picks a champion in a best-of-3 and ignores an invalid final score', function () {

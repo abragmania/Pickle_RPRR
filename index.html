@@ -475,11 +475,12 @@ nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ba
 <canvas id="cf" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40" hidden></canvas>
 <div class="toast" id="toast" hidden></div>
 
-<script src="logic.js"></script>
+<script src="logic.js?v=3"></script>
 <script>
-if(typeof PBRR==='undefined'){
+/* logic.js version 3: bump the ?v= on the tag above, this guard and PBRR.version in logic.js together whenever logic.js changes in a way this page depends on */
+if(typeof PBRR==='undefined'||PBRR.version!==3){
   document.body.textContent='Could not load the app. Reconnect and reload.';
-  throw new Error('logic.js did not load')
+  throw new Error('logic.js did not load or is the wrong version')
 }
 /* Schedule, ranking criteria and the pure scoring logic live in logic.js (PBRR); these names keep the old callers working. */
 var SCHED=PBRR.SCHED,CRIT=PBRR.CRIT,DEF_ORDER=PBRR.DEF_ORDER,DEF_OFF=PBRR.DEF_OFF,validScore=PBRR.validScore;
@@ -552,7 +553,18 @@ function drawSaved(){
   e.textContent=lastSaveOk?'Saved':'Not saved on this phone. Use Share or Backup.'
 }
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-function touch(){if(G){G.u=Date.now()}persist()}
+/* G.champ is recomputed from the game's own data whenever anything changes (never while drawing) */
+function syncChamp(){
+  var c=PBRR.champion(G);
+  G.champ=c?c.text:null;
+}
+function touch(){
+  if(G){
+    syncChamp();
+    G.u=Date.now();
+  }
+  persist();
+}
 
 /* ---------- link = the whole game ---------- */
 function enc(o){
@@ -583,8 +595,8 @@ function clean(g){
     return null;
   var o={id:String(g.id),name:String(g.name||'Game').slice(0,60),names:g.names.map(function(n){
     return String(n||'').slice(0,30)
-  }),scores:{},po:cleanPo(g.po),fin:cleanFin(g.fin),champ:g.champ?String(g.champ).slice(0,90):null,
-      paid:(Array.isArray(g.paid)&&g.paid.length===8)?g.paid.map(Boolean):Array(8).fill(false),started:!!g.started,
+  }),scores:{},po:cleanPo(g.po),fin:cleanFin(g.fin),
+      paid:(Array.isArray(g.paid)&&g.paid.length===8)?g.paid.map(Boolean):Array(8).fill(false),started:!!g.started,demo:!!g.demo,
     tb:Array.isArray(g.tb)?g.tb.filter(function(k){
       return CRIT[k]
     }):DEF_ORDER.slice(),off:Array.isArray(g.off)?g.off.filter(function(k){
@@ -597,11 +609,14 @@ function clean(g){
     if(/^\d-[01]$/.test(k)&&Array.isArray(s))
       o.scores[k]=[String(s[0]).replace(/\D/g,'').slice(0,2),String(s[1]).replace(/\D/g,'').slice(0,2)]
   });
+  /* the champion is derived from the game itself, never taken from the incoming text */
+  var ch=PBRR.champion(o);
+  o.champ=ch?ch.text:null;
   return o;
 }
 function sig(g){
   return JSON.stringify([g.names,g.scores,g.tb,g.off,g.name,g.started,(g.paid||[]).map(Boolean),g.po||null,g.fin||null,
-      g.settle||[]])
+      g.settle||[],!!g.demo])
 }
 /* merge a game in without destroying anything that is already here */
 function mergeGame(raw){
@@ -624,11 +639,15 @@ function fmtDate(t){
 }
 function makeGame(names){
   return {id:uid(),name:'Game '+fmtDate(Date.now()),names:names||Array(8).fill(''),paid:Array(8).fill(false),
-      po:cleanPo(),fin:cleanFin(),champ:null,scores:{},started:false,tb:DEF_ORDER.slice(),off:DEF_OFF.slice(),settle:[],
+      po:cleanPo(),fin:cleanFin(),champ:null,scores:{},started:false,demo:false,tb:DEF_ORDER.slice(),off:DEF_OFF.slice(),settle:[],
       c:Date.now(),u:Date.now()}
 }
 function openGame(id){
   G=ensureTb(ensureFin(ensurePo(ensurePaid(R.games[id]))));
+  /* a game saved before the demo flag existed is a demo when its name says so */
+  if(G.demo==null)
+    G.demo=/^Demo /.test(G.name||'');
+  syncChamp();
   R.cur=id;
   R.round=firstOpenRound();
   R.court=0;
@@ -710,7 +729,7 @@ var POOL=['Alex','Blake','Casey','Drew','Emery','Finn','Gray','Harper','Indy','J
     'Quinn','Reese','Sage','Taylor','Wren','Zion'];
 function rnd(n){return Math.floor(Math.random()*n)}
 function randomizeRun(){
-  if((G.started||playedCount(G)>0)&&!/^Demo /.test(G.name)){
+  if((G.started||playedCount(G)>0)&&!G.demo){
     var cp=JSON.parse(JSON.stringify(G));
     cp.id=uid();
     cp.name=G.name+' (before demo)';
@@ -740,13 +759,17 @@ function randomizeRun(){
     var w2=rnd(2),s2=['',''];s2[w2]='11';s2[1-w2]=String(rnd(10));g.push(s2);if(w2===0)wa++;else wb++;
   }
   G.fin=cleanFin({fmt:f,g:g});
-  G.name='Demo '+fmtDate(Date.now());G.started=true;editing=false;R.round=6;R.court=1;R.view='stand';
+  G.name='Demo '+fmtDate(Date.now());
+  G.demo=true;
+  G.started=true;editing=false;R.round=6;R.court=1;R.view='stand';
   touch();renderAll();window.scrollTo(0,0);toast('Demo filled in. Tap Clear to start over.');
 }
 $('rand').onclick=randomizeRun;
 $('go').onclick=function(){
   for(var i=0;i<8;i++){G.names[i]=$('n'+i).value.trim();G.paid[i]=$('pd'+i).checked}
-  G.started=true;editing=false;R.view='scores';touch();renderAll();
+  G.started=true;editing=false;R.view='scores';
+  G.demo=false;
+  touch();renderAll();
 };
 $('bHome').onclick=function(){
   if(R.view==='games')
@@ -973,17 +996,7 @@ if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitGrid);
 /* ---------- standings ---------- */
 function renderStand(){
   var c=compute(),rk=computeRank(c.P),P=rk.P,complete=c.done===14;lastRank=rk;
-  var unres=[];
-  if(complete)
-    rk.ties.forEach(function(t){
-      t.tiers.forEach(function(tr){
-        if(tr.length>1){
-          var st=P.indexOf(tr[0]);
-          if(st<4)
-            unres.push({s:st,tr:tr})
-        }
-      })
-    });
+  var unres=complete?PBRR.unresolvedTop4(rk):[];
   /* clinched = even if every remaining match went against them, fewer than 4 others can still reach their win count */
   var locked={};
   P.forEach(function(p){
@@ -1212,8 +1225,6 @@ function renderFinals(fs){
     series=fs.wa+'\u2013'+fs.wb;if(fs.champ===fs.tm.B)series=fs.wb+'\u2013'+fs.wa;
     champTxt=nm(fs.champ[0])+' & '+nm(fs.champ[1]);
   }
-  var tag=fs.champ?champTxt+(G.fin.fmt>1?' ('+series+')':''):null;
-  if((G.champ||null)!==tag){G.champ=tag;touch()}
   var rb=$('ribbon');
   if(fs.champ){
     rb.hidden=false;
@@ -1268,7 +1279,11 @@ $('tblist').addEventListener('click',function(e){
   var t=G.tb[i];G.tb[i]=G.tb[j];G.tb[j]=t;touch();renderStand();
 });
 $('tbreset').onclick=function(){G.tb=DEF_ORDER.slice();G.off=DEF_OFF.slice();touch();renderStand()};
-$('gname').addEventListener('input',function(e){G.name=e.target.value;touch()});
+$('gname').addEventListener('input',function(e){
+  G.name=e.target.value;
+  G.demo=false;
+  touch();
+});
 
 /* ---------- games list, trash, backup ---------- */
 var purgeArm=null;
@@ -1460,6 +1475,7 @@ function startOver(){
   G.champ=null;
   G.settle=[];
   G.started=false;
+  G.demo=false;
   editing=false;
   R.round=0;
   R.view='scores';

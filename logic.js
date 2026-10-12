@@ -267,6 +267,59 @@ var PBRR = (function () {
     return out;
   }
 
+  /* tie tiers still level on every tiebreak whose first player sits in the top 4 positions of a ranking.
+     Returns [{ s: start position (0-based), tr: [players] }]; the finals wait until this is empty. */
+  function unresolvedTop4(rank) {
+    var out = [];
+    rank.ties.forEach(function (t) {
+      t.tiers.forEach(function (tr) {
+        if (tr.length > 1) {
+          var st = rank.P.indexOf(tr[0]);
+          if (st < 4) {
+            out.push({ s: st, tr: tr });
+          }
+        }
+      });
+    });
+    return out;
+  }
+
+  var EN_DASH = String.fromCharCode(0x2013);
+
+  function playerName(g, i) {
+    var n = ((g.names && g.names[i]) || '').trim();
+    return n || ('Player ' + (i + 1));
+  }
+
+  /* the champions of a game, or null: needs all 14 matches, no unresolved top-4 tie, and a decided finals series.
+     text is what the app stores in g.champ: 'Name & Name' plus ' (wins-losses)', en dash, when the final is longer than 1 game. */
+  function champion(g) {
+    if (!g || !g.fin || !g.po) {
+      return null;
+    }
+    var c = compute(g);
+    if (c.done !== 14) {
+      return null;
+    }
+    var rk = computeRank(g, c.P);
+    if (unresolvedTop4(rk).length) {
+      return null;
+    }
+    var fs = finState(g, rk.P, true);
+    if (!fs.champ) {
+      return null;
+    }
+    var isA = fs.champ === fs.tm.A;
+    var wins = isA ? fs.wa : fs.wb;
+    var losses = isA ? fs.wb : fs.wa;
+    var series = wins + EN_DASH + losses;
+    var text = playerName(g, fs.champ[0]) + ' & ' + playerName(g, fs.champ[1]);
+    if (g.fin.fmt > 1) {
+      text += ' (' + series + ')';
+    }
+    return { team: fs.champ.slice(), wins: wins, losses: losses, series: series, text: text };
+  }
+
   /* pot and per-player payouts; null when the buy-in is not a positive number */
   function payouts(po, paidCount) {
     var b = parseFloat(po && po.buyin);
@@ -284,6 +337,8 @@ var PBRR = (function () {
   }
 
   return {
+    /* bump together with the ?v= on index.html's logic.js tag and its load guard */
+    version: 3,
     SCHED: SCHED,
     CRIT: CRIT,
     DEF_ORDER: DEF_ORDER,
@@ -298,6 +353,8 @@ var PBRR = (function () {
     computeRank: computeRank,
     finTeams: finTeams,
     finState: finState,
+    unresolvedTop4: unresolvedTop4,
+    champion: champion,
     payouts: payouts
   };
 })();

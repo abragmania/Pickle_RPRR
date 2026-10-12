@@ -9,7 +9,7 @@
 # Project settings: fill in the four blocks marked PROJECT below, or leave them empty.
 cd "$(dirname "$0")/.." || exit 0
 PROJECT="Pickle RR"
-TEMPLATE_VERSION=3   # bump when this template changes; the global sync.sh compares it with the template's and reports a project that is behind
+TEMPLATE_VERSION=4   # bump when this template changes; the global sync.sh compares it with the template's and reports a project that is behind
 TRACKER="PROJECT.md"
 echo "=== $PROJECT session start ($(date '+%a %Y-%m-%d %H:%M')) ==="
 
@@ -43,12 +43,16 @@ LOG_MAX_DAYS=3   # PROJECT: days since the last session-log entry before the sta
 # The doc gate (a git pre-commit hook) travels in tools/hooks/pre-commit; hooks do not travel through GitHub, so each
 # machine installs it here. "git rev-parse --git-path hooks" is the folder git really runs hooks from: it honors
 # core.hooksPath and resolves to the common folder in a linked worktree. A pre-commit hook that is not the gate (no
-# "# Doc gate:" signature line) is never overwritten; the agent merges the checks into it.
+# "# Doc gate:" signature line) is never overwritten; the agent merges the checks into it. A hook that carries a
+# "# Doc gate (merged" line is a project's own hook with the gate merged in by hand: it is left byte-identical and
+# nothing is printed about it (the global sync.sh makes the same check first).
 if [ -f tools/hooks/pre-commit ]; then
   hookdir=$(git rev-parse --git-path hooks 2>/dev/null)
   if [ -n "$hookdir" ]; then
     hookdst="$hookdir/pre-commit"
-    if [ -f "$hookdst" ] && ! grep -q '^# Doc gate:' "$hookdst"; then
+    if [ -f "$hookdst" ] && grep -q '^# Doc gate (merged' "$hookdst"; then
+      [ -x "$hookdst" ] || chmod +x "$hookdst" 2>/dev/null
+    elif [ -f "$hookdst" ] && ! grep -q '^# Doc gate:' "$hookdst"; then
       echo "Doc gate NOT installed: merge tools/hooks/pre-commit into $hookdst, which already has its own pre-commit hook"
     else
       if ! cmp -s tools/hooks/pre-commit "$hookdst"; then
@@ -96,10 +100,10 @@ if [ -f CLAUDE.md ] && [ -f "$TRACKER" ]; then
     echo "OVER CEILING: run trim before any other work (global rules, Records)"
   fi
 fi
-# Session log age: ARCHIVE.md is read only for its newest session-log entry (the log is newest first): the first dated
-# "- YYYY-MM-DD" line under the "Session log" heading, never past the next heading. A dated range ("2026-10-03 to
-# 10-05") takes its first date.
-logdate=$(awk '/^#+ *[Ss]ession log/ { f = 1; next } f && /^#+ / { exit } f && /^- 20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ { print substr($0, 3, 10); exit }' ARCHIVE.md 2>/dev/null)
+# Session log age: the date comes from the first "### YYYY-MM-DD" heading under the "Session log" heading
+# (the form ARCHIVE.md uses), with a "- YYYY-MM-DD" line accepted as a fallback; it never reads past the
+# next "#" or "##" heading.
+logdate=$(awk '/^## *[Ss]ession log/ { f = 1; next } f && /^##? / { exit } f && (/^### 20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]|^- 20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/) { match($0, /20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/); print substr($0, RSTART, 10); exit }' ARCHIVE.md 2>/dev/null)
 if [ -z "$logdate" ]; then
   echo "Last session log: none found in ARCHIVE.md"
 else

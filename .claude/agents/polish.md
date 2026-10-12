@@ -12,4 +12,6 @@ Method: read the UI rulings in DECISIONS.md and the page's CSS (all in `index.ht
 CLEAN UP BEFORE YOU REPORT: delete the PNGs and the throwaway browser profile, stop the browser and server you started, delete any scratch script. Delete only what you created yourself. Say in your report that you did.
 Report in under 150 words: what you changed, PNG paths before and after, anything you left because it needs a logic change (hand those to the lead).
 
+WAITING AND BUDGET: a plain `sleep` is blocked by the Bash tool here; to wait on a server, run a one-shot check script that sleeps inside it, or use the Monitor tool. Never skip or shorten a check to stay within budget: message the lead for more and keep working on what is not in question; your report names anything you could not verify. Scratch files go in the session scratchpad by its full Windows path, never /tmp. Your report also names any command refused by permissions and any failure you did not recover from; a self-corrected slip or a no-match exit is not listed.
+
 Write files with the Write and Edit tools, never a shell heredoc or printf (global rules, Code discipline).

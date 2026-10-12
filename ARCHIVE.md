@@ -3,6 +3,7 @@
 Nothing here is in force. Finished tracker items, finished one-off calls, replaced rulings in full and the session log live here so the startup documents stay short. Search by date or by D-number.
 
 ## Finished items and one-off calls (newest first; date, commit, one line each)
+- 2026-10-12 — Weekly audit applied: session start script to template version 4 (merged-hook check, new session-log date rule), waiting-and-budget line added to all four agent files; the one-page agent-roster conflict went to Adam as Waiting item 3.
 - 2026-10-10 — Retro build from the rules repo: D5 score validity (invalid scores kept, flagged, never counted), one payouts() helper, logic.js plus tests/logic.test.js (`node --test`, 8 tests), sw.js precaches logic.js with a safer offline fallback. Code-review approved with four changes, all applied; the "leader at most 11" rule follows Adam's "games go to 11 (win by 1)".
 - 2026-10-06 to 10-10 — Earlier tracker lines moved here: address-bar throttle (fd37467), no stacked demo backups (3f6bb29), ties box and head-to-head (cc8ae39, e02fe0c, D1, D2), logo to entry and Randomize & Run (efb1f65), the light kit (2026-10-07).
 - 2026-10-07 — The light project kit was added (router, tracker, rulings D1-D3, archive, four agents, session start at template version 3, doc gate); the templates were scrubbed of personal folder paths because this repository is public.

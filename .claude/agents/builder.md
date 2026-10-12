@@ -19,4 +19,6 @@ Rules:
 CLEAN UP BEFORE YOU REPORT: stop any process you started (only that exact process, by its port), delete the scratch files you created outside the repo, leave no background wait running. Delete only what you created yourself; the session scratchpad is shared with other agents. Say in your report that you did.
 Report in under 200 words: files changed, what each change does, checks run and their result, anything left undone or unsure about.
 
+WAITING AND BUDGET: a plain `sleep` is blocked by the Bash tool here; to wait on a server, run a one-shot check script that sleeps inside it, or use the Monitor tool. Never skip or shorten a check to stay within budget: message the lead for more and keep working on what is not in question; your report names anything you could not verify. Scratch files go in the session scratchpad by its full Windows path, never /tmp. Your report also names any command refused by permissions and any failure you did not recover from; a self-corrected slip or a no-match exit is not listed.
+
 Write files with the Write and Edit tools, never a shell heredoc or printf (global rules, Code discipline).

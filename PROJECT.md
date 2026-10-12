@@ -3,8 +3,7 @@
 ## Part 1 — Tracker (one line per item; rewritten at checkpoints, never play-by-play; finished items move to ARCHIVE.md at the next checkpoint)
 
 ### Done since the last checkpoint
-- Retro build (D5): scores over 11 are flagged and never counted, nothing is erased; one payouts() helper; ranking, finals and payout logic moved to logic.js with 8 Node tests; reviewed by code-review, smoke-tested in the browser.
-- The test server port in the docs moved from 8765 (another project uses it) to 8791.
+- Weekly audit 2026-10-12 applied: tools/session_start.sh updated to template version 4, and the four agent files gained the waiting-and-budget line (no verification skipped to save budget).
 
 ### In progress
 - Nothing.
@@ -15,6 +14,8 @@
 ### Waiting on Adam (each runs on its default until he answers; raised again at every checkpoint)
 - 🔴 1. Un-minify the one-line functions in index.html source (retro gap 4)? Default: leave as is, new code is written readable. Lean: yes, as its own commit once the tests exist.
 - 🔴 2. Replace the "Demo " name-prefix check with a demo flag on the game, and set the champion where finals scores change instead of while drawing (retro gap 5)? Default: keep as is. Lean: yes.
+
+- 🔴 3. The global rules require all eight standard agents; this one-page app keeps four (your 2026-10-06 light-kit ruling). Rule it an exception, or add the plan, scout, trim and freshness files? Default: keep four. Lean: file the exception.
 
 ### Watch (found, not started; one fix each)
 - Retro 2026-10-10 gaps 1-3 (scores never validated, no tests, duplicated payouts) are fixed; gaps 4 (minified functions) and 5 (demo found by name, champion set while drawing) are the two Waiting items.

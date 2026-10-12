@@ -9,7 +9,7 @@ Five documents (global rules, RECORDS): this router; `PROJECT.md` (tracker first
 - 🔵 code-review — correctness gate for every change to scoring, ranking, ties, finals or saved data (top model)
 - 👁 visual-qa — renders and judges every visible change at phone width (top model)
 - 🎨 polish — fixes look and feel after a visible change; skipped when nothing visible changed (cheap tier)
-No plan, scout, trim or freshness agent: this is a one-page app. Skip freshness always (nothing on this project goes stale: no data, no research, and publishing is a push).
+Four-role roster by filed exception to the standard eight (D6): this is a one-page app with no data feeds, so there is no plan, scout, trim or freshness agent. Skip freshness always (nothing here goes stale: no data, no research, and publishing is a push).
 
 ## Proportion
 Verification is sized to what the change can break; 🔵 on every scoring, ranking or saved-data change and 👁 on every layout change always stay.

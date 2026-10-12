@@ -1,12 +1,15 @@
 # DECISIONS.md — Pickle RR standing rulings, by area
 
-Rulings a fresh agent must follow or could undo. Read the section for the area you are about to touch. Entry form: `- D<n> (date) rule — why`, with Adam's own words for the why. Numbers are stable and never reused (grouped by area, so not in order); a replaced ruling keeps its number here as a one-line pointer and its full text moves to ARCHIVE.md "Replaced rulings". Working rules (agents, proportion, machines) live in CLAUDE.md. Next free number: D6.
+Rulings a fresh agent must follow or could undo. Read the section for the area you are about to touch. Entry form: `- D<n> (date) rule — why`, with Adam's own words for the why. Numbers are stable and never reused (grouped by area, so not in order); a replaced ruling keeps its number here as a one-line pointer and its full text moves to ARCHIVE.md "Replaced rulings". Working rules (agents, proportion, machines) live in CLAUDE.md. Next free number: D7.
 
 ## Scoring and standings
 - D1 (2026-10-06) The top 4 after the 7 rounds advance, ranked by record, then total points scored in losses, then point differential, then total points scored (fewest points allowed is an optional extra, off by default). Every tie that touches the top 4, including ties for 1st or 2nd, must be settled and marked in the standings and explained in the ties box; a tie that survives every tiebreak is settled by hand (play-off or coin flip) and marked. — Adam: "playoff advancement is determined by record, tiebreak after record is total points in losses" and "All ties need to be settled and marked. Wherever tiebreak/playoff logic gets explained ... it should explain any 1st/2nd ties etc there too."
 - D2 (2026-10-06) Head-to-head is an optional tiebreak in the same list, off by default and movable like the others: among tied players it counts wins minus losses in games where they faced each other as opponents. — Adam: "Yes head to head should be an option in that list."
 
 - D5 (2026-10-10) A game counts only when both scores are numbers, the winner's is above the loser's and at most 11: cut-short games such as 9-5 count, while 12-5 or 99-3 do not. An invalid score is kept as typed, flagged on the Scores page and the standings, and never counted or erased. — Adam: "games go to 11 (win by 1)" and "a match gets cut off at 9-5.....so just count whoever is up as the 'winner'".
+
+## Process
+- D6 (2026-10-12) This project keeps only the builder, code-review, visual-qa and polish agents, as a filed exception to the global rule of eight standard roles; it has no plan, scout, trim or freshness agent. Reason: it is a one-page app with no data feeds. The global CLAUDE.md names this exception. — Adam: "Exception"
 
 ## Public repository
 - D4 (2026-10-07) This project is the stated exception to the global rule that a public repository holds only the built site: the project documents (router, tracker, rulings, archive, README) and the agent files may live in this public repo, because the project is a single static page and everything in it is scrubbed. The scrub is a standing check: no personal path, name, email or computer name ever enters this repository (grep the repo for them before every commit; "Adam" alone and `abragmania` are fine). — Adam: "pickle rprr can be public i couldn't care less"
